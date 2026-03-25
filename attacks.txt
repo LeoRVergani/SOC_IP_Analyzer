@@ -1,16 +1,19 @@
-ALFA Webshell Over HTTP
 Apache HTTP Server Directory Traversal
+ALFA Webshell Over HTTP
 Apache Log4j Remote Code Execution (CVE-2021-44228)
 Apache Struts2 ParametersInterceptor Remote Command Execution
 Apache Tomcat ChunkedInputFilter Denial of Service
 Application Servers Protection Violation
 Argument Injection Over HTTP
 Atividade Suspeita
+Atlassian Confluence Remote Code Execution (CVE-2021-26084)
+Atlassian Confluence Remote Code Execution (CVE-2022-26134)
 Atlassian Confluence Template Injection (CVE-2023-22527)
 Brute Force
 Command Injection Over HTTP
 Content Protection Violation
 Cross-Site Scripting (XSS)
+Cross-Site Scripting Scanning Attempt
 D-Link DCS-2530L Information Disclosure (CVE-2020-25078)
 D-Link DSL-2750B Command Injection (CVE-2016-20017)
 DNS protocol is used to tunnel outbound traffic and bypass security rulebase
@@ -21,22 +24,31 @@ HTTP Headers Remote Code Execution
 HTTP Webshells Activity
 IKE Enforcement Violation
 Linksys Multiple Products Command Injection (CVE-2025-34037)
+Linux System Files Information Disclosure
 MVPower CCTV DVR Remote Code Execution (CVE-2016-20016)
 Malicious IP Addresses
+Masscan Port Scanner
+Metabase GeoJSON Map Information Disclosure (CVE-2021-41277)
 Microsoft Windows HTTP.sys Remote Code Execution (MS15-034: CVE-2015-1635)
 Multiple Routers HNAP Insecure Implementation Privil
 NETGEAR DGN Command Injection
+Nmap Scripting Engine Scanner Over HTTP Request
 Node.js Server-Side Template Injection
 Non Compliant IKE
 Object-Graph Navigation Language Injection
+OpenSSL TLS DTLS Heartbeat Information Disclosure
 OpenSSL TLS Man-In-The-Middle Security Bypass
 PHPUnit Remote Code Execution (CVE-2017-9841)
 Port Scan
 Raisecom Devices Command Injection (CVE-2024-7120)
 React Server Components Remote Code Execution (CVE-2025-55182)
 SQL Injection
+SQL Injection Scanning Attempt
 SSL Enforcement Violation
+SSL Export Cipher Suite
+Same-Source Weak Password Scan Over HTTP
 Scanner Enforcement Violation
+Secure Socket Layer (SSL) Version 3.0
 Security Products Enforcement Violation
 Sensitive Configuration File Disclosure
 SolarWinds Web Help Desk Authentication Bypass
@@ -44,12 +56,16 @@ TBK DVR Devices Command Injection (CVE-2024-3721)
 TLS Servers Cipher Suites Scanning Tools
 TP-Link Archer AX21 Command Injection (CVE-2023-1389)
 ThinkPHP Remote Code Execution (CVE-2018-20062)
+Vite Information Disclosure
 Web Server Enforcement Violation
 Web Server Exposed Git Repository Information Disclosure
+Web Servers Malicious URL Directory Traversal
 Web Servers SSL Flooding Denial of Service
 Web Servers Slow HTTP Denial of Service
 Web Servers Suspicious File Upload
 WordPress HTTP Brute Force Login Attempt
 WordPress Multiple Plugins Remote Code Execution
 WordPress REST API Plugin Information Disclosure
+ZMap Security Scanner
 Zimbra Collaboration Suite Server-Side Request Forgery (CVE-2019-9621)
+watchTowr Security Scanner

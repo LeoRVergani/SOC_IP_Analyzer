@@ -462,7 +462,7 @@ def check_ipinfo():
 
 if __name__ == "__main__":
     print("\n" + "=" * 55)
-    print("  SOC IP Analyzer v5.3 — Servidor iniciado!")
+    print("  SOC IP Analyzer v5.5 — Servidor iniciado!")
     print("  Acesse: http://127.0.0.1:5000")
     print(f"  API Key: {'configurada' if API_KEY else 'NAO CONFIGURADA — edite config.txt'}")
     print(f"  OCR disponivel: {'SIM' if OCR_AVAILABLE else 'NAO (instale o Tesseract)'}")
