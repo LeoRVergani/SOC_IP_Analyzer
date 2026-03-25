@@ -135,6 +135,59 @@ exit /b
 :skip_tesseract
 echo  [INFO] Continuando sem OCR.
 echo.
+:: ══════════════════════════════════════════
+:: [EXTRA] CRIAR ATALHOS NA AREA DE TRABALHO
+:: ══════════════════════════════════════════
+echo.
+echo  [EXTRA] Criando atalhos...
+
+set "DESKTOP=%USERPROFILE%\Desktop"
+set "PROJECT_DIR=%~dp0SOC_IP_Analyzer"
+set "START_BAT=%PROJECT_DIR%\start.bat"
+set "UPDATE_BAT=%~dp0update.bat"
+set "ICON_PATH=%PROJECT_DIR%\icon.ico"
+
+:: DEBUG (opcional)
+echo  Caminho projeto: %PROJECT_DIR%
+echo  Start: %START_BAT%
+
+:: ================================
+:: ATALHO PRINCIPAL
+:: ================================
+if not exist "%DESKTOP%\SOC IP Analyzer.lnk" (
+    echo  Criando atalho principal...
+
+    powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "$ws = New-Object -ComObject WScript.Shell; ^
+    $s = $ws.CreateShortcut('%DESKTOP%\SOC IP Analyzer.lnk'); ^
+    $s.TargetPath = '%START_BAT%'; ^
+    $s.WorkingDirectory = '%PROJECT_DIR%'; ^
+    if (Test-Path '%ICON_PATH%') { $s.IconLocation = '%ICON_PATH%' }; ^
+    $s.Save()"
+
+) else (
+    echo  [OK] Atalho principal ja existe.
+)
+
+:: ================================
+:: ATALHO UPDATE
+:: ================================
+if not exist "%DESKTOP%\SOC Update.lnk" (
+    echo  Criando atalho de update...
+
+    powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "$ws = New-Object -ComObject WScript.Shell; ^
+    $s = $ws.CreateShortcut('%DESKTOP%\SOC Update.lnk'); ^
+    $s.TargetPath = '%UPDATE_BAT%'; ^
+    $s.WorkingDirectory = '%~dp0'; ^
+    if (Test-Path '%ICON_PATH%') { $s.IconLocation = '%ICON_PATH%' }; ^
+    $s.Save()"
+
+) else (
+    echo  [OK] Atalho de update ja existe.
+)
+
+echo.
 
 :: ══════════════════════════════════════════
 :: [5/5] SERVIDOR
