@@ -62,7 +62,7 @@
     justify-content: space-between;
     position: sticky;
     top: 0;
-    z-index: 100;
+    z-index: 10000;
   }
   .topbar-left { display: flex; align-items: center; gap: 12px; }
   .logo-icon {
@@ -77,6 +77,29 @@
     margin-left: 4px; border-left: 1px solid var(--border-bright); padding-left: 12px;
   }
   .topbar-right { display: flex; align-items: center; gap: 16px; font-size: 12px; font-family: 'JetBrains Mono', monospace; color: var(--text-secondary); }
+  .nav-ip-counter {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(59,130,246,0.08);
+    border: 1px solid rgba(59,130,246,0.25);
+    border-radius: 8px; padding: 0 12px; height: 32px;
+    transition: all 0.3s;
+  }
+  .nav-ip-counter.has-ips {
+    background: rgba(59,130,246,0.14);
+    border-color: rgba(59,130,246,0.5);
+    box-shadow: 0 0 12px rgba(59,130,246,0.15);
+  }
+  .nav-ip-counter-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; }
+  .nav-ip-counter-num {
+    font-size: 16px; font-weight: 700; color: var(--accent-blue);
+    font-family: 'JetBrains Mono', monospace; min-width: 20px; text-align: center;
+    transition: all 0.2s;
+  }
+  .nav-ip-counter.has-ips .nav-ip-counter-num { color: var(--accent-cyan); }
+  .nav-ip-counter-sub { font-size: 10px; color: var(--text-muted); letter-spacing: 0.05em; }
+  .nav-divider { width: 1px; height: 20px; background: var(--border-bright); }
+  @keyframes nav-pop { 0%,100% { transform: scale(1); } 50% { transform: scale(1.25); } }
+  .nav-ip-counter-num.pop { animation: nav-pop 0.25s ease; }
   .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-green); box-shadow: 0 0 8px var(--accent-green); animation: pulse-green 2s infinite; }
   @keyframes pulse-green { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
 
@@ -409,9 +432,49 @@
     .subnet-grid { grid-template-columns: repeat(2, 1fr); }
     .subnet-info-grid { grid-template-columns: repeat(2, 1fr); }
   }
+
+  /* ── SEARCHABLE ATTACK DROPDOWN ── */
+  .atk-wrap { position: relative; width: 100%; }
+  .atk-input-row {
+    display: flex; align-items: center;
+    background: var(--bg-input); border: 1px solid var(--border); border-radius: 8px;
+    height: 40px; padding: 0 10px; gap: 6px; cursor: text;
+    transition: border-color 0.2s;
+  }
+  .atk-input-row:focus-within { border-color: var(--accent-blue); box-shadow: 0 0 0 3px var(--glow-blue); }
+  .atk-input-row input {
+    flex: 1; background: transparent; border: none; outline: none;
+    font-size: 13px; font-family: 'JetBrains Mono', monospace;
+    color: var(--text-primary); height: 100%; padding: 0;
+  }
+  .atk-arrow { color: var(--text-secondary); font-size: 10px; flex-shrink: 0; transition: transform 0.15s; pointer-events: none; user-select: none; }
+  .atk-wrap.open .atk-arrow { transform: rotate(180deg); }
+  .atk-dropdown {
+    display: none; position: fixed;
+    background: var(--bg-card); border: 1px solid var(--border-bright); border-radius: 8px;
+    z-index: 9999; max-height: 220px; overflow-y: auto;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    min-width: 200px; pointer-events: auto;
+  }
+  .atk-dropdown.atk-open { display: block; }
+  .atk-option {
+    padding: 8px 12px; font-size: 12px; font-family: 'JetBrains Mono', monospace;
+    color: var(--text-primary); cursor: pointer; border-bottom: 1px solid rgba(30,45,74,0.4);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: background 0.1s;
+  }
+  .atk-option:last-child { border-bottom: none; }
+  .atk-option:hover, .atk-option.active { background: var(--bg-card-hover); color: var(--accent-cyan); }
+  .atk-option.selected { color: var(--accent-cyan); }
+  .atk-empty { padding: 10px 12px; font-size: 12px; color: var(--text-secondary); text-align: center; }
+  .atk-dropdown::-webkit-scrollbar { width: 6px; }
+  .atk-dropdown::-webkit-scrollbar-track { background: transparent; }
+  .atk-dropdown::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
 </style>
 </head>
 <body>
+
+<!-- Portal para dropdowns de ataque — fora de qualquer overflow:hidden -->
+<div id="body-atk-portal"></div>
 
 <!-- TOPBAR -->
 <div class="topbar">
@@ -421,6 +484,17 @@
     <span class="logo-sub">IP Threat Analyzer v5.3 — Check Point</span>
   </div>
   <div class="topbar-right">
+    <!-- Contador de IPs na lista -->
+    <div class="nav-ip-counter" id="navIpCounter">
+      <span class="nav-ip-counter-label">Lista</span>
+      <span class="nav-ip-counter-num" id="navIpTotal">0</span>
+      <span class="nav-ip-counter-sub">IPs</span>
+      <div class="nav-divider"></div>
+      <span style="font-size:10px;color:var(--accent-red);font-family:'JetBrains Mono',monospace;" id="navIpHigh" title="Alto risco (>50%)">⚠ <span id="navIpHighNum">0</span></span>
+      <div class="nav-divider"></div>
+      <span style="font-size:10px;color:var(--accent-green);font-family:'JetBrains Mono',monospace;" id="navIpBlock" title="Para bloquear">🛡 <span id="navIpBlockNum">0</span></span>
+    </div>
+    <div class="nav-divider"></div>
     <div class="status-dot"></div>
     <span id="clockDisplay">--:--:--</span>
     <span id="serverStatus" style="color: var(--text-muted);">servidor...</span>
@@ -455,9 +529,15 @@
       <label>Protection Name / Ataque</label>
       <div class="attack-row">
         <div class="attack-select-wrap">
-          <select id="attackSelect">
-            <option value="">Carregando ataques...</option>
-          </select>
+          <div class="atk-wrap" id="attackSelect-wrap">
+            <div class="atk-input-row" onclick="atkToggle('attackSelect-wrap')">
+              <input type="text" id="attackSelect-input" placeholder="Buscar ataque..." autocomplete="off"
+                oninput="atkFilter('attackSelect-wrap')" onkeydown="atkKeydown(event,'attackSelect-wrap')" />
+              <span class="atk-arrow">▼</span>
+            </div>
+            <div class="atk-dropdown" id="attackSelect-list"></div>
+            <input type="hidden" id="attackSelect" value="" />
+          </div>
         </div>
         <button class="btn btn-icon" title="Adicionar novo ataque" onclick="toggleAddAttack()">+</button>
       </div>
@@ -598,9 +678,15 @@
                 <!-- Select de ataque visível apenas no modo ips_only -->
                 <div id="ocrIpsOnlyAttack" class="hidden" style="margin-top:4px;">
                   <label style="font-size:10px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;display:block;">Protection Name / Ataque</label>
-                  <select id="ocrIpsOnlySelect" style="height:36px;font-size:12px;width:100%;">
-                    <option value="Atividade Suspeita">Atividade Suspeita</option>
-                  </select>
+                  <div class="atk-wrap" id="ocrIpsOnlySelect-wrap">
+                    <div class="atk-input-row" onclick="atkToggle('ocrIpsOnlySelect-wrap')">
+                      <input type="text" id="ocrIpsOnlySelect-input" placeholder="Buscar ataque..." autocomplete="off"
+                        oninput="atkFilter('ocrIpsOnlySelect-wrap')" onkeydown="atkKeydown(event,'ocrIpsOnlySelect-wrap')" />
+                      <span class="atk-arrow">▼</span>
+                    </div>
+                    <div class="atk-dropdown" id="ocrIpsOnlySelect-list"></div>
+                    <input type="hidden" id="ocrIpsOnlySelect" value="Atividade Suspeita" />
+                  </div>
                 </div>
               </div>
             </div>
@@ -659,9 +745,15 @@
             </label>
             <div style="margin-top: 8px;">
               <label>Protection Name padrão</label>
-              <select id="bulkAttackSelect" style="margin-top: 4px;">
-                <option value="">Carregando ataques...</option>
-              </select>
+              <div class="atk-wrap" id="bulkAttackSelect-wrap" style="margin-top:4px;">
+                <div class="atk-input-row" onclick="atkToggle('bulkAttackSelect-wrap')">
+                  <input type="text" id="bulkAttackSelect-input" placeholder="Buscar ataque..." autocomplete="off"
+                    oninput="atkFilter('bulkAttackSelect-wrap')" onkeydown="atkKeydown(event,'bulkAttackSelect-wrap')" />
+                  <span class="atk-arrow">▼</span>
+                </div>
+                <div class="atk-dropdown" id="bulkAttackSelect-list"></div>
+                <input type="hidden" id="bulkAttackSelect" value="" />
+              </div>
             </div>
           </div>
         </div>
@@ -952,9 +1044,15 @@
       </div>
       <div style="flex:2;min-width:240px;">
         <label>Protection Name / Ataque</label>
-        <select id="subnetAttackSelect" style="height:36px;font-size:12px;">
-          <option value="Atividade Suspeita">Atividade Suspeita</option>
-        </select>
+        <div class="atk-wrap" id="subnetAttackSelect-wrap">
+          <div class="atk-input-row" onclick="atkToggle('subnetAttackSelect-wrap')">
+            <input type="text" id="subnetAttackSelect-input" placeholder="Buscar ataque..." autocomplete="off"
+              oninput="atkFilter('subnetAttackSelect-wrap')" onkeydown="atkKeydown(event,'subnetAttackSelect-wrap')" />
+            <span class="atk-arrow">▼</span>
+          </div>
+          <div class="atk-dropdown" id="subnetAttackSelect-list"></div>
+          <input type="hidden" id="subnetAttackSelect" value="Atividade Suspeita" />
+        </div>
       </div>
       <div>
         <button class="btn btn-cyan btn-sm" style="height:36px;" onclick="gerarComandosSubnet()">⚙️ Gerar comandos Check Point</button>
@@ -1080,29 +1178,197 @@ async function checkServer() {
 checkServer();
 
 // ══════════════════════════════════════
+// SEARCHABLE ATTACK DROPDOWN — componente
+// Cada instância é identificada pelo wrapId (ex: 'attackSelect-wrap')
+// O valor selecionado fica no <input type="hidden"> com id = wrapId sem '-wrap'
+// ══════════════════════════════════════
+const _atkData = {};     // wrapId -> [lista de ataques]
+let   _atkOpen = null;   // wrapId atualmente aberto
+
+// Posiciona o dropdown fixo abaixo do input-row usando getBoundingClientRect
+// Assim escapa de qualquer overflow:hidden dos pais
+function _atkPosition(wrapId) {
+  const baseId   = wrapId.replace('-wrap', '');
+  const inputRow = document.querySelector(`#${wrapId} .atk-input-row`);
+  const dropdown = document.getElementById(baseId + '-list');
+  if (!inputRow || !dropdown) return;
+
+  const rect   = inputRow.getBoundingClientRect();
+  const spaceBelow = window.innerHeight - rect.bottom;
+  const spaceAbove = rect.top;
+  const maxH   = 220;
+
+  dropdown.style.width = rect.width + 'px';
+  dropdown.style.left  = rect.left + 'px';  // position:fixed — coordenadas de viewport, sem scrollX
+
+  // Abre para cima se não couber embaixo
+  if (spaceBelow < maxH && spaceAbove > spaceBelow) {
+    const h = Math.min(maxH, spaceAbove - 8);
+    dropdown.style.maxHeight = h + 'px';
+    dropdown.style.top    = '';
+    dropdown.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+  } else {
+    dropdown.style.maxHeight = Math.min(maxH, spaceBelow - 8) + 'px';
+    dropdown.style.top    = rect.bottom + 4 + 'px';  // position:fixed — sem scrollY
+    dropdown.style.bottom = '';
+  }
+}
+
+function atkInit(wrapId, attacks, defaultValue) {
+  _atkData[wrapId] = attacks;
+  const baseId = wrapId.replace('-wrap', '');
+  const hidden = document.getElementById(baseId);
+  const input  = document.getElementById(baseId + '-input');
+  const val    = defaultValue || (attacks.length ? attacks[0] : '');
+  if (hidden) hidden.value = val;
+  if (input)  input.value  = '';        // começa vazio — usuário digita para buscar
+  if (input)  input.placeholder = val;  // mostra o valor padrão como placeholder
+  // Move o dropdown para o body se ainda não foi movido
+  const list = document.getElementById(baseId + '-list');
+  if (list && list.parentElement && list.parentElement.id !== 'body-atk-portal') {
+    document.getElementById('body-atk-portal').appendChild(list);
+  }
+  atkRenderList(wrapId, '');
+}
+
+function atkRenderList(wrapId, filter) {
+  const baseId   = wrapId.replace('-wrap', '');
+  const list     = document.getElementById(baseId + '-list');
+  const hidden   = document.getElementById(baseId);
+  const attacks  = _atkData[wrapId] || [];
+  const f        = filter.toLowerCase();
+  const filtered = f ? attacks.filter(a => a.toLowerCase().includes(f)) : attacks;
+  if (!list) return;
+
+  if (!filtered.length) {
+    list.innerHTML = '<div class="atk-empty">Nenhum ataque encontrado</div>';
+    return;
+  }
+  list.innerHTML = filtered.map(a => {
+    const sel = hidden && hidden.value === a ? ' selected' : '';
+    return `<div class="atk-option${sel}" onmousedown="atkSelect('${wrapId}','${escHtml(a)}')">${escHtml(a)}</div>`;
+  }).join('');
+}
+
+function atkSelect(wrapId, value) {
+  const baseId = wrapId.replace('-wrap', '');
+  const hidden = document.getElementById(baseId);
+  const input  = document.getElementById(baseId + '-input');
+  if (hidden) hidden.value = value;
+  if (input) { input.value = ''; input.placeholder = value; }
+  atkClose();
+  atkRenderList(wrapId, '');
+}
+
+function atkClose() {
+  if (!_atkOpen) return;
+  const baseId = _atkOpen.replace('-wrap', '');
+  const list   = document.getElementById(baseId + '-list');
+  const wrap   = document.getElementById(_atkOpen);
+  if (list) list.classList.remove('atk-open');
+  if (wrap) wrap.classList.remove('open');
+  _atkOpen = null;
+}
+
+function atkToggle(wrapId) {
+  if (_atkOpen === wrapId) { atkClose(); return; }
+  if (_atkOpen) atkClose();
+
+  const baseId = wrapId.replace('-wrap', '');
+  const wrap   = document.getElementById(wrapId);
+  const input  = document.getElementById(baseId + '-input');
+  const list   = document.getElementById(baseId + '-list');
+
+  _atkOpen = wrapId;
+  wrap.classList.add('open');
+  if (list) {
+    atkRenderList(wrapId, input ? input.value : '');
+    _atkPosition(wrapId);
+    list.classList.add('atk-open');
+  }
+  if (input) { input.focus(); input.select(); }
+}
+
+function atkFilter(wrapId) {
+  const baseId = wrapId.replace('-wrap', '');
+  const input  = document.getElementById(baseId + '-input');
+  if (_atkOpen !== wrapId) {
+    if (_atkOpen) atkClose();
+    const wrap = document.getElementById(wrapId);
+    const list = document.getElementById(baseId + '-list');
+    _atkOpen = wrapId;
+    wrap.classList.add('open');
+    if (list) { _atkPosition(wrapId); list.classList.add('atk-open'); }
+  }
+  atkRenderList(wrapId, input ? input.value : '');
+}
+
+function atkKeydown(e, wrapId) {
+  const baseId  = wrapId.replace('-wrap', '');
+  const list    = document.getElementById(baseId + '-list');
+  if (!list) return;
+  const options = list.querySelectorAll('.atk-option');
+  const active  = list.querySelector('.atk-option.active');
+  let idx = Array.from(options).indexOf(active);
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    idx = Math.min(idx + 1, options.length - 1);
+    options.forEach(o => o.classList.remove('active'));
+    if (options[idx]) { options[idx].classList.add('active'); options[idx].scrollIntoView({block:'nearest'}); }
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    idx = Math.max(idx - 1, 0);
+    options.forEach(o => o.classList.remove('active'));
+    if (options[idx]) { options[idx].classList.add('active'); options[idx].scrollIntoView({block:'nearest'}); }
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    const target = active || options[0];
+    if (target) atkSelect(wrapId, target.textContent.trim());
+  } else if (e.key === 'Escape') {
+    atkClose();
+  }
+}
+
+// Fecha ao clicar fora — checa wrap E dropdown (que agora está no body)
+document.addEventListener('mousedown', e => {
+  if (!_atkOpen) return;
+  const baseId   = _atkOpen.replace('-wrap', '');
+  const wrap     = document.getElementById(_atkOpen);
+  const dropdown = document.getElementById(baseId + '-list');
+  if (wrap && wrap.contains(e.target)) return;
+  if (dropdown && dropdown.contains(e.target)) return;
+  atkClose();
+});
+
+// Reposiciona se a janela for redimensionada ou a página rolada
+window.addEventListener('scroll', () => { if (_atkOpen) _atkPosition(_atkOpen); }, true);
+window.addEventListener('resize', () => { if (_atkOpen) _atkPosition(_atkOpen); });
+
+// ══════════════════════════════════════
 // ATTACKS LIST
 // ══════════════════════════════════════
 async function loadAttacks() {
+  const WRAP_IDS = [
+    'attackSelect-wrap',
+    'bulkAttackSelect-wrap',
+    'subnetAttackSelect-wrap',
+    'ocrIpsOnlySelect-wrap',
+  ];
   try {
     const r = await fetch(`${SERVER}/attacks`);
     const attacks = await r.json();
-    const sel = document.getElementById('attackSelect');
-    sel.innerHTML = attacks.map(a => `<option value="${escHtml(a)}">${escHtml(a)}</option>`).join('');
-    // Also populate bulk select
-    const sel2 = document.getElementById('bulkAttackSelect');
-    if (sel2) sel2.innerHTML = attacks.map(a => `<option value="${escHtml(a)}">${escHtml(a)}</option>`).join('');
-    const sel3 = document.getElementById('subnetAttackSelect');
-    if (sel3) sel3.innerHTML = attacks.map(a => `<option value="${escHtml(a)}">${escHtml(a)}</option>`).join('');
-    const sel4 = document.getElementById('ocrIpsOnlySelect');
-    if (sel4) sel4.innerHTML = attacks.map(a => `<option value="${escHtml(a)}">${escHtml(a)}</option>`).join('');
+    WRAP_IDS.forEach(wid => {
+      if (document.getElementById(wid)) atkInit(wid, attacks, attacks[0] || 'Atividade Suspeita');
+    });
+    // Compatibilidade: atualiza saveNewAttack para reinicializar o dropdown da seção 1
+    window._allAttacks = attacks;
   } catch {
-    document.getElementById('attackSelect').innerHTML = '<option value="Atividade Suspeita">Atividade Suspeita</option>';
-    const s2 = document.getElementById('bulkAttackSelect');
-    if (s2) s2.innerHTML = '<option value="Atividade Suspeita">Atividade Suspeita</option>';
-    const s3 = document.getElementById('subnetAttackSelect');
-    if (s3) s3.innerHTML = '<option value="Atividade Suspeita">Atividade Suspeita</option>';
-    const s4 = document.getElementById('ocrIpsOnlySelect');
-    if (s4) s4.innerHTML = '<option value="Atividade Suspeita">Atividade Suspeita</option>';
+    const fallback = ['Atividade Suspeita'];
+    WRAP_IDS.forEach(wid => {
+      if (document.getElementById(wid)) atkInit(wid, fallback, 'Atividade Suspeita');
+    });
+    window._allAttacks = fallback;
   }
 }
 loadAttacks();
@@ -1322,9 +1588,12 @@ async function saveNewAttack() {
     });
     const data = await r.json();
     if (data.attacks) {
-      const sel = document.getElementById('attackSelect');
-      sel.innerHTML = data.attacks.map(a => `<option value="${escHtml(a)}">${escHtml(a)}</option>`).join('');
-      sel.value = val;
+      // Reinicializa todos os dropdowns com a lista atualizada e seleciona o novo
+      const WRAP_IDS = ['attackSelect-wrap','bulkAttackSelect-wrap','subnetAttackSelect-wrap','ocrIpsOnlySelect-wrap'];
+      WRAP_IDS.forEach(wid => {
+        if (document.getElementById(wid)) atkInit(wid, data.attacks, val);
+      });
+      window._allAttacks = data.attacks;
     }
     document.getElementById('newAttackInput').value = '';
     document.getElementById('addAttackRow').classList.add('hidden');
@@ -1784,10 +2053,36 @@ function renderList() {
 }
 
 function updateMetrics() {
-  document.getElementById('metTotal').textContent = ipList.length;
-  document.getElementById('metHigh').textContent = ipList.filter(r => r.abuse > 50).length;
-  document.getElementById('metBR').textContent = ipList.filter(r => r.isBR).length;
-  document.getElementById('metBlock').textContent = ipList.filter(r => !r.isBR).length;
+  const total   = ipList.length;
+  const high    = ipList.filter(r => r.abuse > 50).length;
+  const br      = ipList.filter(r => r.isBR).length;
+  const toBlock = ipList.filter(r => !r.isBR && !checkProtectedNetwork(r.ip)).length;
+
+  document.getElementById('metTotal').textContent = total;
+  document.getElementById('metHigh').textContent  = high;
+  document.getElementById('metBR').textContent    = br;
+  document.getElementById('metBlock').textContent = toBlock;
+
+  // Atualiza contador do nav
+  const navCounter  = document.getElementById('navIpCounter');
+  const navTotal    = document.getElementById('navIpTotal');
+  const navHighNum  = document.getElementById('navIpHighNum');
+  const navBlockNum = document.getElementById('navIpBlockNum');
+
+  if (navTotal) {
+    // Animação de "pop" no número ao mudar
+    const prev = navTotal.textContent;
+    navTotal.textContent    = total;
+    navHighNum.textContent  = high;
+    navBlockNum.textContent = toBlock;
+
+    if (prev !== String(total)) {
+      navTotal.classList.remove('pop');
+      void navTotal.offsetWidth; // reflow para reiniciar animação
+      navTotal.classList.add('pop');
+    }
+    navCounter.classList.toggle('has-ips', total > 0);
+  }
 }
 
 function limparLista() {
